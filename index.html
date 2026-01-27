@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Status | Yarm School</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --yarm-blue: rgb(3, 41, 106);
+            --status-green: #2ecc71;
+            --status-red: #e74c3c;
+            --status-amber: #f39c12;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            background-color: #f4f7f9;
+            color: #333;
+        }
+
+        header {
+            background-color: var(--yarm-blue);
+            padding: 2rem;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            max-width: 200px;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-family: 'Libre+Baskerville', serif;
+            margin: 0;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Banner Status */
+        .status-banner {
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            color: white;
+            transition: background 0.3s ease;
+        }
+
+        .status-banner.operational { background-color: var(--status-green); }
+        .status-banner.issue { background-color: var(--status-red); }
+
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            margin-right: 15px;
+            box-shadow: 0 0 0 rgba(255, 255, 255, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        /* Service List */
+        .service-grid {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 2rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .service-item:last-child { border-bottom: none; }
+
+        .service-name { font-weight: 600; color: var(--yarm-blue); }
+
+        .status-indicator {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .status-up { color: var(--status-green); background: #eafff2; }
+        .status-down { color: var(--status-red); background: #fff1f0; }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: #7f8c8d;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <img src="https://www.yarmschool.org/wp-content/themes/yarm-school/img/logo.png" alt="Yarm School Logo" class="logo">
+    <h1>Digital Services Status</h1>
+</header>
+
+<div class="container">
+    <div id="banner" class="status-banner operational">
+        <div class="pulse"></div>
+        <strong id="banner-text">All Systems Operational</strong>
+    </div>
+
+    <div class="service-grid">
+        <div class="service-item">
+            <span class="service-name">Google Workspace</span>
+            <span id="google-status" class="status-indicator status-up">Operational</span>
+        </div>
+        <div class="service-item">
+            <span class="service-name">iSAMS Portal</span>
+            <span id="isams-status" class="status-indicator status-up">Operational</span>
+        </div>
+        <div class="service-item">
+            <span class="service-name">Google Classroom</span>
+            <span id="classroom-status" class="status-indicator status-up">Operational</span>
+        </div>
+        <div class="service-item">
+            <span class="service-name">YouTube (Edu Content)</span>
+            <span id="youtube-status" class="status-indicator status-up">Operational</span>
+        </div>
+        <div class="service-item">
+            <span class="service-name">Evolve (EVOLVE - Yarm)</span>
+            <span id="evolve-status" class="status-indicator status-up">Operational</span>
+        </div>
+    </div>
+</div>
+
+<footer>
+    &copy; 2026 Yarm School IT Services. Updated every 15 minutes.
+</footer>
+
+<script>
+    // Pull real data from your status.json
+    fetch('status.json?t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+        if(data.global_issue) {
+            document.getElementById('banner').className = 'status-banner issue';
+            document.getElementById('banner-text').innerText = data.message;
+        }
+        
+        // Loop through individual services if you want to override them
+        Object.keys(data.services).forEach(key => {
+            const el = document.getElementById(key + '-status');
+            if(el && data.services[key] === "Down") {
+                el.innerText = "Issues Detected";
+                el.className = "status-indicator status-down";
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
