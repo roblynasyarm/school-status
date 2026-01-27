@@ -3,6 +3,15 @@
   "message": "All Systems Operational",
   "broadcast_enabled": false,
   "broadcast_msg": "",
-  "services": {},
+  "services": {
+    "Google Workspaces": {
+      "status": "Up",
+      "type": "keyword",
+      "url": "https://www.google.com/appsstatus/dashboard/",
+      "keyword": "No Incidents",
+      "keyword_logic": "presence",
+      "last_updated": "New"
+    }
+  },
   "global_last_updated": ""
 }
