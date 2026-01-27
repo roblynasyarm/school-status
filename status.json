@@ -1,17 +1,8 @@
 {
   "global_issue": false,
   "message": "All Systems Operational",
-  "broadcast_enabled": true,
-  "broadcast_msg": "TESTING",
-  "services": {
-    "Google": {
-      "status": "Up",
-      "type": "keyword",
-      "url": "https://www.google.com/appsstatus/dashboard/",
-      "keyword": "No incidents",
-      "keyword_logic": "presence",
-      "last_updated": "2026-01-27 15:30"
-    }
-  },
-  "global_last_updated": "27/01/2026, 15:5"
+  "broadcast_enabled": false,
+  "broadcast_msg": "",
+  "services": {},
+  "global_last_updated": ""
 }
