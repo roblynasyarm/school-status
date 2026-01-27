@@ -83,7 +83,7 @@
             document.getElementById('global_message').value = currentData.message;
             renderServices();
 
-            const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/yarm-status/contents/status.json');
+            const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json');
             const repoData = await repoRes.json();
             currentSha = repoData.sha;
         }
@@ -130,7 +130,7 @@
             currentData.message = document.getElementById('global_message').value;
             currentData.global_last_updated = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }).slice(0, 16);
 
-            const response = await fetch('https://api.github.com/repos/roblynasyarm/yarm-status/contents/status.json', {
+            const response = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json', {
                 method: 'PUT',
                 headers: { 'Authorization': `token ${decryptedToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
