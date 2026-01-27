@@ -15,23 +15,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Fetch and Clean Google Status
+      - name: Fetch and Check Google Status
         id: google
         run: |
           # Fetch the raw data
           curl -s "https://www.google.com/appsstatus/dashboard/incidents.json" > raw_google.json
           
-          # Clean the data: Remove the leading 'dashboard.onFullHistory(' and trailing ')'
-          # If the file doesn't have the wrapper, this safely does nothing.
-          sed 's/^[^({]*//; s/)[^)]*$//' raw_google.json > clean_google.json
-          
-          # Check for any active incident today
-          # This looks for services where occurrence_type is not 'none'
-          INCIDENT_COUNT=$(jq '[.[] | select(.occurrence_type != "none")] | length' clean_google.json)
-          
-          if [ "$INCIDENT_COUNT" -gt "0" ]; then
+          # We search the file for any status that ISN'T 'available' 
+          # Google uses 'available', 'disruption', or 'outage'
+          # If 'disruption' or 'outage' is found, grep will return a '0' exit code
+          if grep -qiE "disruption|outage" raw_google.json; then
+            echo "Google reporting issue"
             echo "HAS_ISSUE=true" >> $GITHUB_ENV
           else
+            echo "Google clear"
             echo "HAS_ISSUE=false" >> $GITHUB_ENV
           fi
 
