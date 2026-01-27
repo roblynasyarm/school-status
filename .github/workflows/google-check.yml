@@ -3,7 +3,6 @@ on:
   push:
     branches: ["main"]
   schedule:
-    # Runs at 08, 23, 38, and 53 minutes past the hour
     - cron: '8,23,38,53 * * * *'
   workflow_dispatch:
 
@@ -16,16 +15,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Fetch Official Google Status
+      - name: Fetch and Clean Google Status
         id: google
         run: |
-          # Fetch the official JSON feed
-          curl -s https://www.google.com/appsstatus/dashboard/history.json > google_history.json
+          # Fetch the raw data
+          curl -s "https://www.google.com/appsstatus/dashboard/incidents.json" > raw_google.json
           
-          # Check for any active incident today across Workspace
-          INCIDENT=$(jq '[.[] | select(.occurrence_type != "none")] | length' google_history.json)
+          # Clean the data: Remove the leading 'dashboard.onFullHistory(' and trailing ')'
+          # If the file doesn't have the wrapper, this safely does nothing.
+          sed 's/^[^({]*//; s/)[^)]*$//' raw_google.json > clean_google.json
           
-          if [ "$INCIDENT" -gt "0" ]; then
+          # Check for any active incident today
+          # This looks for services where occurrence_type is not 'none'
+          INCIDENT_COUNT=$(jq '[.[] | select(.occurrence_type != "none")] | length' clean_google.json)
+          
+          if [ "$INCIDENT_COUNT" -gt "0" ]; then
             echo "HAS_ISSUE=true" >> $GITHUB_ENV
           else
             echo "HAS_ISSUE=false" >> $GITHUB_ENV
@@ -33,12 +37,14 @@ jobs:
 
       - name: Update status.json
         run: |
+          NOW=$(TZ='Europe/London' date '+%Y-%m-%d %H:%M')
+          
           if [ "${{ env.HAS_ISSUE }}" = "true" ]; then
-            # Set Google status to Down
-            jq '.services.google = "Down" | .global_issue = true | .message = "Google Workspace: Active Disruption Reported"' status.json > temp.json && mv temp.json status.json
+            # Update status.json with 'Down' status and timestamp
+            jq --arg now "$NOW" '.services.google = {"status": "Down", "last_updated": $now} | .global_issue = true | .global_last_updated = $now | .message = "Google Workspace: Active Disruption Reported"' status.json > temp.json && mv temp.json status.json
           else
-            # Set Google status back to Up
-            jq '.services.google = "Up" | .global_issue = false | .message = "All Systems Operational"' status.json > temp.json && mv temp.json status.json
+            # Update status.json with 'Up' status and timestamp
+            jq --arg now "$NOW" '.services.google = {"status": "Up", "last_updated": $now} | .global_issue = false | .global_last_updated = $now | .message = "All Systems Operational"' status.json > temp.json && mv temp.json status.json
           fi
 
       - name: Commit Changes
@@ -46,5 +52,4 @@ jobs:
           git config --global user.name "Yarm Status Bot"
           git config --global user.email "status@yarmschool.org"
           git add status.json
-          # Only commit if there is actually a change to the status
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update Google status" && git push)
