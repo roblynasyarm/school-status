@@ -10,10 +10,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run Checks
+      - name: Run Dynamic Checks
         run: |
           NOW=$(TZ='Europe/London' date '+%Y-%m-%d %H:%M')
           TODAY=$(TZ='Europe/London' date '+%Y-%m-%d')
@@ -23,8 +23,8 @@ jobs:
           for key in $keys; do
             type=$(jq -r ".services[\"$key\"] | if type==\"object\" then .type else \"manual\" end" status.json)
             url=$(jq -r ".services[\"$key\"] | if type==\"object\" then .url else \"\" end" status.json)
-            kw=$(jq -r ".services[\"$key\"].keyword" status.json)
-            logic=$(jq -r ".services[\"$key\"].keyword_logic" status.json)
+            kw=$(jq -r ".services[\"$key\"].keyword // \"\"" status.json)
+            logic=$(jq -r ".services[\"$key\"].keyword_logic // \"presence\"" status.json)
 
             if [ "$type" == "manual" ] || [ "$url" == "" ] || [ "$url" == "null" ]; then continue; fi
 
@@ -32,7 +32,7 @@ jobs:
             if [ "$type" == "ping" ]; then
               CODE=$(curl -o /dev/null -s -L --max-time 10 -w "%{http_code}" "$url")
               if [ "$CODE" -eq 200 ]; then STATUS="Up"; else STATUS="Down"; fi
-            else
+            elif [ "$type" == "keyword" ]; then
               CONTENT=$(curl -s -L --max-time 10 "$url")
               if [ "$logic" == "absence" ]; then
                 if echo "$CONTENT" | grep -q "$kw"; then STATUS="Down"; else STATUS="Up"; fi
@@ -41,16 +41,19 @@ jobs:
               fi
             fi
             END=$(date +%s%N)
-            MS=$(( (END - START) / 1000000 ))
+            LATENCY=$(( (END - START) / 1000000 ))
 
-            jq --arg k "$key" --arg s "$STATUS" --arg n "$NOW" --arg p "${MS}ms" '.services[$k].status = $s | .services[$k].last_updated = $n | .services[$k].ping = $p' status.json > tmp.json && mv tmp.json status.json
-            jq --arg k "$key" --arg d "$TODAY" --arg s "$STATUS" '.[$k][$d] += [$s]' history.json > h_tmp.json && mv h_tmp.json history.json
+            jq --arg k "$key" --arg s "$STATUS" --arg n "$NOW" --arg p "${LATENCY}ms" \
+            '.services[$k].status = $s | .services[$k].last_updated = $n | .services[$k].ping = $p' \
+            status.json > tmp.json && mv tmp.json status.json
+
+            jq --arg k "$key" --arg d "$TODAY" --arg s "$STATUS" \
+            '.[$k][$d] += [$s]' history.json > h_tmp.json && mv h_tmp.json history.json
           done
 
-      - name: Commit
+      - name: Commit and Push
         run: |
           git config --global user.name "Yarm Status Bot"
           git config --global user.email "it@yarmschool.org"
           git add status.json history.json
-          git commit -m "Auto-check update" || echo "No changes"
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-check and History Update" && git push)
