@@ -11,59 +11,50 @@
         body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; padding: 20px; color: #333; }
         .card { background: white; padding: 30px; border-radius: 12px; max-width: 700px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
-        /* Service Block Styling */
-        .service-block { background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; }
-        .service-header { display: flex; justify-content: space-between; font-weight: 600; color: var(--yarm-blue); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-        
+        .service-block { background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .service-header { display: flex; justify-content: space-between; font-weight: 600; color: var(--yarm-blue); margin-bottom: 10px; text-transform: uppercase; }
         label { display: block; margin-top: 10px; font-weight: 600; font-size: 0.75rem; color: #666; text-transform: uppercase; }
         input, select, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
-        
         .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: white; padding: 10px; border-radius: 6px; border: 1px solid #efefef; }
-        
         .btn-push { background: var(--yarm-green); color: white; font-weight: bold; font-size: 1.1rem; margin-top: 25px; border: none; cursor: pointer; padding: 15px; }
         .btn-logout { background: #666; color: white; border: none; padding: 8px 15px; width: auto; font-size: 0.8rem; cursor: pointer; border-radius: 4px; }
-        .delete-btn { color: var(--yarm-red); font-size: 0.75rem; cursor: pointer; font-weight: 600; border: none; background: none; width: auto; padding: 0; }
-        
+        .delete-btn { color: var(--yarm-red); font-size: 0.75rem; cursor: pointer; font-weight: 600; border: none; background: none; width: auto; }
         #admin-content { display: none; }
         #log { text-align: center; font-weight: 600; margin-top: 15px; min-height: 1.5em; }
-        hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
     </style>
 </head>
 <body>
 
     <div class="card" id="login-card">
-        <h2 style="color: var(--yarm-blue); margin-top:0;">Yarm Admin Login</h2>
-        <p style="font-size: 0.9rem; color: #666;">Enter password to manage digital services.</p>
+        <h2>Yarm Admin Login</h2>
         <input type="password" id="password" placeholder="Enter Password">
         <button onclick="unlock()">Unlock Console</button>
-        <p id="login-err" style="color: var(--yarm-red); font-size: 0.8rem; text-align: center; margin-top: 10px;"></p>
+        <p id="login-err" style="color: var(--yarm-red); text-align: center;"></p>
     </div>
 
     <div class="card" id="admin-content">
         <div class="header-flex">
-            <h2 style="margin:0; color: var(--yarm-blue);">Management Console</h2>
+            <h2 style="margin:0;">Management Console</h2>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
-        <label>Global Status Message (Top Banner)</label>
-        <input type="text" id="global_message" placeholder="e.g. All Systems Operational">
+        <label>Global Status Message</label>
+        <input type="text" id="global_message" oninput="currentData.message = this.value">
         
         <label>Global Alert State</label>
-        <select id="global_issue">
-            <option value="false">✅ Normal (Green Banner)</option>
-            <option value="true">⚠️ Incident (Red Banner)</option>
+        <select id="global_issue" onchange="currentData.global_issue = (this.value === 'true')">
+            <option value="false">✅ Normal</option>
+            <option value="true">⚠️ Incident</option>
         </select>
 
         <hr>
-        <h3 style="margin-bottom: 15px; font-size: 1rem;">Service Configuration</h3>
         <div id="services-list"></div>
 
-        <div style="background:#eef2f7; padding:20px; border-radius:8px; margin-top:20px;">
-            <h4 style="margin:0 0 10px 0; font-size: 0.9rem;">Add New Service</h4>
+        <div style="background:#eef2f7; padding:20px; border-radius:8px;">
+            <h4>Add New Service</h4>
             <div style="display:flex; gap:10px;">
-                <input type="text" id="new_name" placeholder="Name (e.g. iSAMS Portal)" style="margin:0;">
-                <button onclick="addService()" style="background:var(--yarm-blue); width:120px; margin:0;">Add Service</button>
+                <input type="text" id="new_name" placeholder="Service Name">
+                <button onclick="addService()" style="background:var(--yarm-blue); width:120px;">Add</button>
             </div>
         </div>
 
@@ -72,31 +63,22 @@
     </div>
 
     <script>
-        // REPLACE THIS WITH YOUR AES ENCRYPTED TOKEN STRING
         const ENCRYPTED_TOKEN = "U2FsdGVkX1+oJae4Znfxi+y1Af9zfXuNrQJ8X6mjIY/4H84oK1IvGPsn90PfS3j2V0VWX0FwTDj6Pfh7jmzTFsblkrAlaKQOg/6b1UkyYRxIVXCwW921MTJEPjh4MbIJYmCh5Msj2gEcVGz6JJGQ1A==";
-        
         let decryptedToken = "";
-        let currentData = {};
+        let currentData = { services: {} };
 
-        function logout() {
-            decryptedToken = "";
-            location.reload();
-        }
+        function logout() { location.reload(); }
 
         async function unlock() {
             const pw = document.getElementById('password').value;
             try {
                 const bytes = CryptoJS.AES.decrypt(ENCRYPTED_TOKEN, pw);
                 decryptedToken = bytes.toString(CryptoJS.enc.Utf8);
-
-                if (!decryptedToken.startsWith("github_pat")) throw new Error("Invalid");
-
+                if (!decryptedToken.startsWith("github_pat")) throw new Error();
                 document.getElementById('login-card').style.display = 'none';
                 document.getElementById('admin-content').style.display = 'block';
                 loadData();
-            } catch (e) {
-                document.getElementById('login-err').innerText = "Access Denied. Incorrect Password.";
-            }
+            } catch (e) { document.getElementById('login-err').innerText = "Invalid Password"; }
         }
 
         async function loadData() {
@@ -116,37 +98,37 @@
                     <div class="service-block">
                         <div class="service-header">
                             <span>${key}</span>
-                            <button class="delete-btn" onclick="deleteService('${key}')">REMOVE SERVICE</button>
+                            <button class="delete-btn" onclick="deleteService('${key}')">REMOVE</button>
                         </div>
                         <div class="config-grid">
                             <div>
                                 <label>Manual Status</label>
                                 <select onchange="updateVal('${key}', 'status', this.value)">
-                                    <option value="Up" ${s.status === 'Up' ? 'selected' : ''}>Up (Operational)</option>
-                                    <option value="Down" ${s.status === 'Down' ? 'selected' : ''}>Down (Issues)</option>
+                                    <option value="Up" ${s.status === 'Up' ? 'selected' : ''}>Up</option>
+                                    <option value="Down" ${s.status === 'Down' ? 'selected' : ''}>Down</option>
                                 </select>
                             </div>
                             <div>
-                                <label>Automation Type</label>
+                                <label>Type</label>
                                 <select onchange="updateVal('${key}', 'type', this.value)">
-                                    <option value="manual" ${s.type === 'manual' ? 'selected' : ''}>Manual Only</option>
-                                    <option value="ping" ${s.type === 'ping' ? 'selected' : ''}>HTTP Ping (200 OK)</option>
-                                    <option value="keyword" ${s.type === 'keyword' ? 'selected' : ''}>Keyword Check</option>
+                                    <option value="manual" ${s.type === 'manual' ? 'selected' : ''}>Manual</option>
+                                    <option value="ping" ${s.type === 'ping' ? 'selected' : ''}>Ping</option>
+                                    <option value="keyword" ${s.type === 'keyword' ? 'selected' : ''}>Keyword</option>
                                 </select>
                             </div>
                             <div style="grid-column: span 2;">
-                                <label>URL to Check</label>
-                                <input type="text" value="${s.url || ''}" onchange="updateVal('${key}', 'url', this.value)" placeholder="https://...">
+                                <label>URL</label>
+                                <input type="text" value="${s.url || ''}" oninput="updateVal('${key}', 'url', this.value)">
                             </div>
                             <div>
-                                <label>Keyword Search</label>
-                                <input type="text" value="${s.keyword || ''}" onchange="updateVal('${key}', 'keyword', this.value)" placeholder="e.g. Operational">
+                                <label>Keyword</label>
+                                <input type="text" value="${s.keyword || ''}" oninput="updateVal('${key}', 'keyword', this.value)">
                             </div>
                             <div>
-                                <label>Keyword Logic</label>
+                                <label>Logic</label>
                                 <select onchange="updateVal('${key}', 'keyword_logic', this.value)">
-                                    <option value="presence" ${s.keyword_logic === 'presence' ? 'selected' : ''}>Pass if FOUND</option>
-                                    <option value="absence" ${s.keyword_logic === 'absence' ? 'selected' : ''}>Pass if MISSING</option>
+                                    <option value="presence" ${s.keyword_logic === 'presence' ? 'selected' : ''}>FOUND</option>
+                                    <option value="absence" ${s.keyword_logic === 'absence' ? 'selected' : ''}>MISSING</option>
                                 </select>
                             </div>
                         </div>
@@ -156,71 +138,53 @@
 
         function updateVal(key, field, val) {
             currentData.services[key][field] = val;
-            // Update timestamp if status is manually toggled
             if(field === 'status') {
-                currentData.services[key].last_updated = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }).slice(0, 16);
+                currentData.services[key].last_updated = new Date().toLocaleString('en-GB').slice(0, 16);
             }
         }
 
         function addService() {
-            const input = document.getElementById('new_name');
-            const name = input.value.trim();
+            const name = document.getElementById('new_name').value.trim();
             if(!name) return;
-            currentData.services[name] = { 
-                status: "Up", 
-                type: "manual", 
-                url: "", 
-                keyword: "", 
-                keyword_logic: "presence", 
-                last_updated: "Added Now" 
-            };
-            input.value = "";
+            currentData.services[name] = { status: "Up", type: "manual", url: "", keyword: "", keyword_logic: "presence", last_updated: "New" };
+            document.getElementById('new_name').value = "";
             renderServices();
         }
 
         function deleteService(key) {
-            if(confirm(`Are you sure you want to remove ${key}?`)) {
-                delete currentData.services[key];
-                renderServices();
-            }
+            if(confirm(`Delete ${key}?`)) { delete currentData.services[key]; renderServices(); }
         }
 
         async function saveChanges() {
             const log = document.getElementById('log');
             log.style.color = "#666";
-            log.innerText = "🔄 Syncing with GitHub...";
+            log.innerText = "🔄 Saving to GitHub...";
 
             try {
-                // Fetch the freshest SHA
-                const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json', {
+                // IMPORTANT: Fetch SHA from API with a timestamp to bypass GitHub's cache
+                const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json?t=' + Date.now(), {
                     headers: { 'Authorization': `token ${decryptedToken}` }
                 });
                 const repoData = await repoRes.json();
-                const latestSha = repoData.sha;
+                
+                currentData.global_last_updated = new Date().toLocaleString('en-GB').slice(0, 16);
 
-                // Prepare Data
-                currentData.global_issue = document.getElementById('global_issue').value === "true";
-                currentData.message = document.getElementById('global_message').value;
-                currentData.global_last_updated = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }).slice(0, 16);
-
-                // Push Update
                 const response = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json', {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${decryptedToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: "Admin Panel Update",
+                        message: "Admin Update",
                         content: btoa(unescape(encodeURIComponent(JSON.stringify(currentData, null, 2)))),
-                        sha: latestSha
+                        sha: repoData.sha
                     })
                 });
 
                 if(response.ok) {
                     log.style.color = "var(--yarm-green)";
-                    log.innerText = "✅ Successfully Updated!";
-                    setTimeout(() => location.reload(), 1500);
+                    log.innerText = "✅ Saved! Refreshing in 2s...";
+                    setTimeout(() => location.reload(), 2000);
                 } else {
-                    const err = await response.json();
-                    throw new Error(err.message);
+                    throw new Error("GitHub rejected the update. Check your token permissions.");
                 }
             } catch (e) {
                 log.style.color = "var(--yarm-red)";
