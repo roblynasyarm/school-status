@@ -89,8 +89,19 @@
             </div>
         </div>
 
-        <button onclick="saveChanges()" class="btn-push">Push Updates Live</button>
-        <p id="log"></p>
+<div style="background: #fff5f5; border: 1px solid #fed7d7; padding: 15px; border-radius: 8px; margin-top: 25px;">
+    <p style="margin: 0; font-size: 0.85rem; color: #c53030; font-weight: 600;">
+        ⚠️ Note: After pushing changes, it takes about 1 minute for the public status page to update.
+    </p>
+</div>
+
+<button onclick="saveChanges()" class="btn-push">Push Changes Live</button>
+
+<button onclick="triggerWorkflow()" style="background: var(--yarm-blue); color: white; margin-top: 10px; border: none; cursor: pointer; padding: 12px; font-weight: 600; border-radius: 6px;">
+    ⚡ Run Automated Checks Now
+</button>
+
+<p id="log"></p>
     </div>
 
     <script>
