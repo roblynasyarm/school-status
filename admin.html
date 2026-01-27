@@ -7,75 +7,127 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; }
+        :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; --yarm-gold: #ffc107; }
         body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; padding: 20px; color: #333; }
-        .card { background: white; padding: 30px; border-radius: 12px; max-width: 700px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .card { background: white; padding: 30px; border-radius: 12px; max-width: 750px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; gap: 10px; }
+        
+        /* Broadcast UI */
+        .broadcast-box { background: #fff3cd; border: 2px solid #ffeeba; padding: 20px; border-radius: 8px; margin-bottom: 25px; transition: 0.3s; }
+        .broadcast-active { border-color: var(--yarm-gold); background: #fff9e6; box-shadow: 0 0 10px rgba(255,193,7,0.2); }
+        
         .service-block { background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
         .service-header { display: flex; justify-content: space-between; font-weight: 600; color: var(--yarm-blue); margin-bottom: 10px; text-transform: uppercase; }
+        
         label { display: block; margin-top: 10px; font-weight: 600; font-size: 0.75rem; color: #666; text-transform: uppercase; }
-        input, select, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        input, select, button, textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        textarea { height: 60px; resize: vertical; }
+
         .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: white; padding: 10px; border-radius: 6px; border: 1px solid #efefef; }
-        .btn-push { background: var(--yarm-green); color: white; font-weight: bold; font-size: 1.1rem; margin-top: 25px; border: none; cursor: pointer; padding: 15px; }
-        .btn-logout { background: #666; color: white; border: none; padding: 8px 15px; width: auto; font-size: 0.8rem; cursor: pointer; border-radius: 4px; }
+        .btn-push { background: var(--yarm-green); color: white; font-weight: bold; font-size: 1.1rem; margin-top: 25px; border: none; cursor: pointer; padding: 15px; transition: opacity 0.2s; }
+        .btn-push:hover { opacity: 0.9; }
+        
+        .nav-btn { background: #eee; color: #333; border: none; padding: 8px 15px; width: auto; font-size: 0.8rem; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; }
+        .btn-logout { background: #666; color: white; }
         .delete-btn { color: var(--yarm-red); font-size: 0.75rem; cursor: pointer; font-weight: 600; border: none; background: none; width: auto; }
+        
         #admin-content { display: none; }
         #log { text-align: center; font-weight: 600; margin-top: 15px; min-height: 1.5em; }
+        hr { border: 0; border-top: 2px solid #eee; margin: 30px 0; }
     </style>
 </head>
 <body>
+
     <div class="card" id="login-card">
-        <h2>Yarm Admin Login</h2>
+        <h2 style="color: var(--yarm-blue); margin-top: 0;">Yarm Admin Login</h2>
         <input type="password" id="password" placeholder="Enter Password">
-        <button onclick="unlock()">Unlock Console</button>
-        <p id="login-err" style="color: var(--yarm-red); text-align: center;"></p>
+        <button onclick="unlock()" style="background: var(--yarm-blue); color: white; border: none; cursor: pointer;">Unlock Console</button>
+        <p id="login-err" style="color: var(--yarm-red); text-align: center; margin-top: 10px;"></p>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="index.html" class="nav-btn">← Back to Status Page</a>
+        </div>
     </div>
 
     <div class="card" id="admin-content">
         <div class="header-flex">
-            <h2 style="margin:0;">Management Console</h2>
-            <button class="btn-logout" onclick="logout()">Logout</button>
-        </div>
-
-        <label>Global Status Message</label>
-        <input type="text" id="global_message" oninput="currentData.message = this.value">
-        
-        <label>Global Alert State</label>
-        <select id="global_issue" onchange="currentData.global_issue = (this.value === 'true')">
-            <option value="false">✅ Normal</option>
-            <option value="true">⚠️ Incident</option>
-        </select>
-
-        <hr>
-        <div id="services-list"></div>
-
-        <div style="background:#eef2f7; padding:20px; border-radius:8px;">
-            <h4>Add New Service</h4>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="new_name" placeholder="Service Name">
-                <button onclick="addService()" style="background:var(--yarm-blue); width:120px;">Add</button>
+            <h2 style="margin:0; color: var(--yarm-blue); font-size: 1.4rem;">Management</h2>
+            <div style="display: flex; gap: 8px;">
+                <a href="index.html" class="nav-btn">View Status</a>
+                <button class="nav-btn btn-logout" onclick="logout()">Logout</button>
             </div>
         </div>
 
-        <button onclick="saveChanges()" class="btn-push">Push All Changes Live</button>
+        <div class="broadcast-box" id="broadcast-ui">
+            <h4 style="margin:0 0 10px 0; color: #856404;">🚨 Emergency Broadcast</h4>
+            <select id="broadcast_enabled" onchange="currentData.broadcast_enabled = (this.value === 'true'); toggleBroadcastUI()">
+                <option value="false">OFF (Normal)</option>
+                <option value="true">ON (Override)</option>
+            </select>
+            <label>Broadcast Message</label>
+            <textarea id="broadcast_msg" oninput="currentData.broadcast_msg = this.value" placeholder="Type emergency message..."></textarea>
+        </div>
+
+        <label>Banner State (Normal Mode)</label>
+        <select id="global_issue" onchange="currentData.global_issue = (this.value === 'true')">
+            <option value="false">✅ All Systems Operational</option>
+            <option value="true">⚠️ Issues Reported</option>
+        </select>
+
+        <label>Status Message</label>
+        <input type="text" id="global_message" oninput="currentData.message = this.value">
+
+        <hr>
+
+        <h3 style="font-size: 1rem; margin-bottom: 15px;">Services</h3>
+        <div id="services-list"></div>
+
+        <div style="background:#eef2f7; padding:20px; border-radius:8px;">
+            <h4 style="margin:0 0 10px 0; font-size: 0.85rem;">Add New Service</h4>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="new_name" placeholder="Name" style="margin:0;">
+                <button onclick="addService()" style="background:var(--yarm-blue); color: white; width:80px; margin:0; border: none; cursor: pointer;">Add</button>
+            </div>
+        </div>
+
+        <button onclick="saveChanges()" class="btn-push">Push Updates Live</button>
         <p id="log"></p>
     </div>
 
     <script>
         const ENCRYPTED_TOKEN = "U2FsdGVkX1+oJae4Znfxi+y1Af9zfXuNrQJ8X6mjIY/4H84oK1IvGPsn90PfS3j2V0VWX0FwTDj6Pfh7jmzTFsblkrAlaKQOg/6b1UkyYRxIVXCwW921MTJEPjh4MbIJYmCh5Msj2gEcVGz6JJGQ1A==";
-        let decryptedToken = "";
+        
         let currentData = { services: {} };
+
+        // Auto-login if token is in session
+        window.onload = () => {
+            if (sessionStorage.getItem('yarm_token')) {
+                showAdmin();
+            }
+        };
+
+        function logout() {
+            sessionStorage.removeItem('yarm_token');
+            location.reload();
+        }
 
         async function unlock() {
             const pw = document.getElementById('password').value;
             try {
                 const bytes = CryptoJS.AES.decrypt(ENCRYPTED_TOKEN, pw);
-                decryptedToken = bytes.toString(CryptoJS.enc.Utf8);
-                if (!decryptedToken.startsWith("github_pat")) throw new Error();
-                document.getElementById('login-card').style.display = 'none';
-                document.getElementById('admin-content').style.display = 'block';
-                loadData();
-            } catch (e) { document.getElementById('login-err').innerText = "Invalid Password"; }
+                const token = bytes.toString(CryptoJS.enc.Utf8);
+                if (!token.startsWith("github_pat")) throw new Error();
+                
+                sessionStorage.setItem('yarm_token', token);
+                showAdmin();
+            } catch (e) { 
+                document.getElementById('login-err').innerText = "Access Denied."; 
+            }
+        }
+
+        function showAdmin() {
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('admin-content').style.display = 'block';
+            loadData();
         }
 
         async function loadData() {
@@ -83,15 +135,24 @@
                 const res = await fetch('status.json?t=' + Date.now());
                 const raw = res.ok ? await res.json() : {};
                 currentData = {
-                    global_issue: raw.global_issue || false,
-                    message: raw.message || "",
+                    global_issue: raw.global_issue ?? false,
+                    message: raw.message || "All Systems Operational",
+                    broadcast_enabled: raw.broadcast_enabled ?? false,
+                    broadcast_msg: raw.broadcast_msg || "",
                     services: raw.services || {},
                     global_last_updated: raw.global_last_updated || ""
                 };
                 document.getElementById('global_issue').value = currentData.global_issue.toString();
                 document.getElementById('global_message').value = currentData.message;
+                document.getElementById('broadcast_enabled').value = currentData.broadcast_enabled.toString();
+                document.getElementById('broadcast_msg').value = currentData.broadcast_msg;
+                toggleBroadcastUI();
                 renderServices();
             } catch (e) { console.error(e); }
+        }
+
+        function toggleBroadcastUI() {
+            document.getElementById('broadcast-ui').className = currentData.broadcast_enabled ? "broadcast-box broadcast-active" : "broadcast-box";
         }
 
         function renderServices() {
@@ -121,22 +182,22 @@
             document.getElementById('new_name').value = ""; renderServices(); 
         }
         function deleteService(k) { if(confirm(`Delete ${k}?`)) { delete currentData.services[k]; renderServices(); } }
-        function logout() { location.reload(); }
 
         async function saveChanges() {
             const log = document.getElementById('log'); log.innerText = "🔄 Saving...";
+            const token = sessionStorage.getItem('yarm_token');
             try {
                 const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json?t=' + Date.now(), {
-                    headers: { 'Authorization': `token ${decryptedToken}` }
+                    headers: { 'Authorization': `token ${token}` }
                 });
                 const repoData = await repoRes.json();
                 currentData.global_last_updated = new Date().toLocaleString('en-GB').slice(0,16);
                 const response = await fetch('https://api.github.com/repos/roblynasyarm/school-status/contents/status.json', {
                     method: 'PUT',
-                    headers: { 'Authorization': `token ${decryptedToken}`, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: "Admin Update", content: btoa(unescape(encodeURIComponent(JSON.stringify(currentData, null, 2)))), sha: repoData.sha })
                 });
-                if(response.ok) { log.innerText = "✅ Saved!"; setTimeout(() => location.reload(), 2000); }
+                if(response.ok) { log.style.color = "var(--yarm-green)"; log.innerText = "✅ Successfully Pushed!"; setTimeout(() => loadData(), 1000); }
             } catch (e) { log.innerText = "❌ Error: " + e.message; }
         }
     </script>
