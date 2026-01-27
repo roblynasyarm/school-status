@@ -1,0 +1,72 @@
+name: Dynamic Service Checker
+on:
+  schedule:
+    # Runs at 11, 26, 41, and 56 minutes past the hour (Ugly Times)
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+
+jobs:
+  run-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Dynamic Checks
+        run: |
+          # Set the timestamp for the updates
+          NOW=$(TZ='Europe/London' date '+%Y-%m-%d %H:%M')
+          
+          # Get a list of all service keys from the JSON
+          keys=$(jq -r '.services | keys[]' status.json)
+          
+          for key in $keys; do
+            # Extract config for each service
+            type=$(jq -r ".services[\"$key\"].type" status.json)
+            url=$(jq -r ".services[\"$key\"].url" status.json)
+            keyword=$(jq -r ".services[\"$key\"].keyword" status.json)
+            logic=$(jq -r ".services[\"$key\"].keyword_logic" status.json)
+
+            # Skip if the service is set to manual or has no URL
+            if [ "$type" == "manual" ] || [ "$url" == "null" ] || [ "$url" == "" ]; then
+              echo "Skipping $key (Manual or No URL)"
+              continue
+            fi
+
+            echo "Checking $key via $type logic..."
+
+            if [ "$type" == "ping" ]; then
+              # PING LOGIC: Check for HTTP 200 OK
+              CODE=$(curl -o /dev/null -s -L --max-time 10 -w "%{http_code}" "$url")
+              if [ "$CODE" -eq 200 ]; then STATUS="Up"; else STATUS="Down"; fi
+            
+            elif [ "$type" == "keyword" ]; then
+              # KEYWORD LOGIC: Download page and check for presence/absence
+              CONTENT=$(curl -s -L --max-time 10 "$url")
+              
+              if [ "$logic" == "absence" ]; then
+                # Fail if the keyword IS found (e.g. searching for "Outage" or "Error")
+                if echo "$CONTENT" | grep -q "$keyword"; then STATUS="Down"; else STATUS="Up"; fi
+              else
+                # Fail if the keyword IS NOT found (e.g. searching for "Operational" or "Login")
+                if echo "$CONTENT" | grep -q "$keyword"; then STATUS="Up"; else STATUS="Down"; fi
+              fi
+            fi
+
+            echo "Result for $key: $STATUS"
+
+            # Update the specific service in the status.json file
+            jq --arg k "$key" --arg s "$STATUS" --arg n "$NOW" \
+            '.services[$k].status = $s | .services[$k].last_updated = $n' \
+            status.json > tmp.json && mv tmp.json status.json
+          done
+
+      - name: Commit and Push Updates
+        run: |
+          git config --global user.name "Yarm Status Bot"
+          git config --global user.email "it@yarmschool.org"
+          git add status.json
+          # Only push if the status values actually changed
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-check service update" && git push)
