@@ -115,7 +115,35 @@
                 showAdmin();
             }
         };
+async function triggerWorkflow() {
+    const log = document.getElementById('log');
+    const token = sessionStorage.getItem('yarm_token');
+    log.style.color = "#666";
+    log.innerText = "🚀 Requesting manual check...";
 
+    try {
+        const response = await fetch('https://api.github.com/repos/roblynasyarm/school-status/actions/workflows/school-checks.yml/dispatches', {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ref: 'main' }) // or 'master' depending on your branch name
+        });
+
+        if (response.ok) {
+            log.style.color = "var(--yarm-green)";
+            log.innerText = "⚡ Success! Automation started. Results will appear in ~1 minute.";
+        } else {
+            const err = await response.json();
+            throw new Error(err.message || "Is workflow_dispatch enabled?");
+        }
+    } catch (e) {
+        log.style.color = "var(--yarm-red)";
+        log.innerText = "❌ Failed: " + e.message;
+    }
+}
         function logout() {
             sessionStorage.removeItem('yarm_token');
             location.reload();
