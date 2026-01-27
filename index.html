@@ -7,82 +7,103 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; }
-        body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
+        body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 800px; margin: auto; }
         
         /* Banner Styles */
-        .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.5s; }
         .operational { background: var(--yarm-green); }
         .issue { background: var(--yarm-red); }
+        .status-banner h1 { margin: 0; font-size: 1.8rem; }
 
         /* Service Cards */
         .service-grid { display: grid; gap: 15px; }
         .service-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .service-main { display: flex; justify-content: space-between; align-items: center; }
-        .service-name { font-weight: 600; color: var(--yarm-blue); display: block; }
-        .last-updated { font-size: 0.75rem; color: #888; }
+        .service-name { font-weight: 600; color: var(--yarm-blue); font-size: 1.1rem; }
+        .last-updated { font-size: 0.75rem; color: #888; display: block; margin-top: 4px; }
         
         /* Ping Badge */
-        .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; vertical-align: middle; margin-left: 5px; }
+        .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; vertical-align: middle; margin-left: 8px; font-weight: 400; }
 
         /* History Sparkline */
-        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-        .history-label { font-size: 0.7rem; color: #999; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .history-label { font-size: 0.65rem; color: #aaa; display: flex; justify-content: space-between; margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
         .history-bar { display: flex; gap: 2px; height: 18px; }
-        .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; }
+        .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; cursor: help; }
         .day-up { background: var(--yarm-green); }
         .day-down { background: var(--yarm-red); }
         
-        /* Tooltip simple simulation */
-        .day-block:hover::after { content: attr(data-date); position: absolute; top: -25px; left: 50%; transform: translateX(-50%); 
-                                  background: #333; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 0.6rem; white-space: nowrap; z-index: 10; }
+        /* Simple Tooltip */
+        .day-block:hover::after { content: attr(data-date); position: absolute; top: -28px; left: 50%; transform: translateX(-50%); 
+                                  background: #333; color: #fff; padding: 3px 7px; border-radius: 4px; font-size: 0.65rem; white-space: nowrap; z-index: 10; }
 
-        footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #888; }
+        footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #aaa; }
+        a { color: inherit; text-decoration: none; transition: 0.2s; }
+        a:hover { opacity: 1; color: var(--yarm-blue); }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="banner" class="status-banner">
-        <h1 id="banner-text">Loading Status...</h1>
-        <small>Last global check: <span id="global-time">-</span></small>
+        <h1 id="banner-text">Checking Systems...</h1>
+        <small>Last check: <span id="global-time">-</span></small>
     </div>
 
     <div class="service-grid" id="service-container">
         </div>
 
     <footer>
-        &copy; 2026 Yarm School IT Services | <a href="admin.html" style="color: inherit; text-decoration: none; opacity: 0.3;">Admin</a>
+        &copy; 2026 Yarm School IT Services | 
+        <a href="admin.html" style="opacity: 0.3;">Admin Login</a>
     </footer>
 </div>
 
 <script>
     async function initStatus() {
+        const container = document.getElementById('service-container');
+        
         try {
-            const [statusRes, historyRes] = await Promise.all([
-                fetch('status.json?t=' + Date.now()),
-                fetch('history.json?t=' + Date.now())
-            ]);
-
+            // 1. Fetch Status Data
+            const statusRes = await fetch('status.json?t=' + Date.now());
+            if (!statusRes.ok) throw new Error("Status file not found");
             const data = await statusRes.json();
-            const history = await historyRes.json();
 
-            document.getElementById('global-time').innerText = data.global_last_updated;
-            const container = document.getElementById('service-container');
+            // 2. Fetch History Data (Optional)
+            let history = {};
+            try {
+                const historyRes = await fetch('history.json?t=' + Date.now());
+                if (historyRes.ok) history = await historyRes.json();
+            } catch (e) {
+                console.warn("History data unavailable yet.");
+            }
+
+            // 3. Update Global Banner
+            const banner = document.getElementById('banner');
+            const bannerText = document.getElementById('banner-text');
+            document.getElementById('global-time').innerText = data.global_last_updated || "Just now";
+
+            if (data.global_issue) {
+                banner.className = 'status-banner issue';
+                bannerText.innerText = data.message || "Service Disruption Reported";
+            } else {
+                banner.className = 'status-banner operational';
+                bannerText.innerText = "All Systems Operational";
+            }
+
+            // 4. Render Individual Services
             container.innerHTML = "";
-
-            let anyIssues = data.global_issue;
-
             Object.keys(data.services).forEach(key => {
                 const s = data.services[key];
-                if (s.status === "Down") anyIssues = true;
-
-                // Build Service UI
-                const pingHtml = s.ping ? `<span class="ping-badge">${s.ping}</span>` : '';
-                const item = document.createElement('div');
-                item.className = 'service-item';
                 
-                // History Blocks (Last 90 Days)
+                // Formatting
+                const pingHtml = s.ping ? `<span class="ping-badge">${s.ping}</span>` : '';
+                const isUp = s.status === 'Up';
+                const statusColor = isUp ? 'var(--yarm-green)' : 'var(--yarm-red)';
+                const statusLabel = isUp ? 'Operational' : 'Issues Detected';
+
+                // Build 90-Day History Bar
                 let historyHtml = '';
                 const daysToDisplay = 90;
                 for (let i = daysToDisplay; i >= 0; i--) {
@@ -90,22 +111,24 @@
                     d.setDate(d.getDate() - i);
                     const dateStr = d.toISOString().split('T')[0];
                     
-                    // Check history file for this date
-                    const dayData = (history[key] && history[key][dateStr]) ? history[key][dateStr] : [];
-                    let dayClass = '';
-                    if (dayData.length > 0) {
-                        dayClass = dayData.includes('Down') ? 'day-down' : 'day-up';
+                    let dayClass = ''; // Default empty (gray)
+                    if (history[key] && history[key][dateStr]) {
+                        const record = history[key][dateStr];
+                        const hadIssue = Array.isArray(record) ? record.includes('Down') : record === 'Down';
+                        dayClass = hadIssue ? 'day-down' : 'day-up';
                     }
-
                     historyHtml += `<div class="day-block ${dayClass}" data-date="${dateStr}"></div>`;
                 }
 
+                const item = document.createElement('div');
+                item.className = 'service-item';
                 item.innerHTML = `
                     <div class="service-main">
                         <div>
                             <span class="service-name">${key.toUpperCase()} ${pingHtml}</span>
-                            <small class="last-updated">Status: ${s.status} | Last Check: ${s.last_updated}</small>
+                            <small class="last-updated">Verified: ${s.last_updated}</small>
                         </div>
+                        <span style="font-weight:600; font-size: 0.9rem; color: ${statusColor}">${statusLabel}</span>
                     </div>
                     <div class="history-container">
                         <div class="history-label"><span>90 days ago</span><span>Today</span></div>
@@ -115,22 +138,14 @@
                 container.appendChild(item);
             });
 
-            // Update Banner
-            const banner = document.getElementById('banner');
-            const bannerText = document.getElementById('banner-text');
-            if (anyIssues) {
-                banner.className = 'status-banner issue';
-                bannerText.innerText = data.global_issue ? data.message : "Service Disruption Detected";
-            } else {
-                banner.className = 'status-banner operational';
-                bannerText.innerText = "All Systems Operational";
-            }
-
         } catch (e) {
-            console.error("Status Load Error", e);
+            console.error("Critical Failure:", e);
+            document.getElementById('banner-text').innerText = "System Offline";
+            container.innerHTML = `<p style="text-align:center; color:#666;">Unable to load status data. Please contact IT support.</p>`;
         }
     }
 
+    // Run on load
     initStatus();
 </script>
 </body>
