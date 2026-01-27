@@ -3,95 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Status | Yarm School</title>
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <title>Yarm School Service Status</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --yarm-blue: rgb(3, 41, 106); --status-green: #2ecc71; --status-red: #e74c3c; }
-        body { font-family: 'Montserrat', sans-serif; margin: 0; background-color: #f4f7f9; color: #333; }
-        header { background-color: var(--yarm-blue); padding: 2rem; color: white; text-align: center; }
-        .logo { max-width: 200px; margin-bottom: 1rem; }
-        h1 { font-family: 'Libre+Baskerville', serif; margin: 0; font-size: 1.8rem; }
-        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        .status-banner { border-radius: 8px; padding: 1.5rem; display: flex; align-items: center; margin-bottom: 2rem; color: white; }
-        .status-banner.operational { background-color: var(--status-green); }
-        .status-banner.issue { background-color: var(--status-red); }
-        .pulse { width: 12px; height: 12px; background: white; border-radius: 50%; margin-right: 15px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
-        .service-grid { background: white; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); overflow: hidden; }
-        .service-item { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 2rem; border-bottom: 1px solid #eee; }
+        :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; }
+        body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        
+        /* Banner Styles */
+        .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .operational { background: var(--yarm-green); }
+        .issue { background: var(--yarm-red); }
+
+        /* Service Cards */
+        .service-grid { display: grid; gap: 15px; }
+        .service-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .service-main { display: flex; justify-content: space-between; align-items: center; }
         .service-name { font-weight: 600; color: var(--yarm-blue); display: block; }
-        .last-updated { color: #7f8c8d; font-size: 0.75rem; }
-        .status-indicator { font-size: 0.9rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
-        .status-up { color: var(--status-green); background: #eafff2; }
-        .status-down { color: var(--status-red); background: #fff1f0; }
-        footer { text-align: center; margin-top: 3rem; color: #7f8c8d; font-size: 0.8rem; padding-bottom: 2rem; }
+        .last-updated { font-size: 0.75rem; color: #888; }
+        
+        /* Ping Badge */
+        .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; vertical-align: middle; margin-left: 5px; }
+
+        /* History Sparkline */
+        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+        .history-label { font-size: 0.7rem; color: #999; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .history-bar { display: flex; gap: 2px; height: 18px; }
+        .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; }
+        .day-up { background: var(--yarm-green); }
+        .day-down { background: var(--yarm-red); }
+        
+        /* Tooltip simple simulation */
+        .day-block:hover::after { content: attr(data-date); position: absolute; top: -25px; left: 50%; transform: translateX(-50%); 
+                                  background: #333; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 0.6rem; white-space: nowrap; z-index: 10; }
+
+        footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #888; }
     </style>
 </head>
 <body>
 
-<header>
-    <img src="https://www.yarmschool.org/wp-content/themes/yarm-school/img/logo.png" alt="Yarm School Logo" class="logo">
-    <h1>Digital Services Status</h1>
-</header>
-
 <div class="container">
-    <div id="banner" class="status-banner operational">
-        <div class="pulse"></div>
-        <div>
-            <strong id="banner-text">Checking systems...</strong><br>
-            <small>Last Check: <span id="global-time">-</span></small>
-        </div>
+    <div id="banner" class="status-banner">
+        <h1 id="banner-text">Loading Status...</h1>
+        <small>Last global check: <span id="global-time">-</span></small>
     </div>
 
-    <div class="service-grid">
-        <div class="service-item">
-            <div><span class="service-name">Google Workspace</span><small class="last-updated">Verified: <span id="google-time">-</span></small></div>
-            <span id="google-status" class="status-indicator">...</span>
+    <div class="service-grid" id="service-container">
         </div>
-        <div class="service-item">
-            <div><span class="service-name">iSAMS Portal</span><small class="last-updated">Verified: <span id="isams-time">-</span></small></div>
-            <span id="isams-status" class="status-indicator">...</span>
-        </div>
-        <div class="service-item">
-            <div><span class="service-name">Google Classroom</span><small class="last-updated">Verified: <span id="classroom-time">-</span></small></div>
-            <span id="classroom-status" class="status-indicator">...</span>
-        </div>
-        <div class="service-item">
-            <div><span class="service-name">YouTube</span><small class="last-updated">Verified: <span id="youtube-time">-</span></small></div>
-            <span id="youtube-status" class="status-indicator">...</span>
-        </div>
-        <div class="service-item">
-            <div><span class="service-name">Evolve</span><small class="last-updated">Verified: <span id="evolve-time">-</span></small></div>
-            <span id="evolve-status" class="status-indicator">...</span>
-        </div>
-    </div>
+
+    <footer>
+        &copy; 2026 Yarm School IT Services | <a href="admin.html" style="color: inherit; text-decoration: none; opacity: 0.3;">Admin</a>
+    </footer>
 </div>
 
-<footer>&copy; 2026 Yarm School IT Services</footer>
-
 <script>
-    fetch('status.json?t=' + Date.now())
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('global-time').innerText = data.global_last_updated;
-        if(data.global_issue) {
-            document.getElementById('banner').className = 'status-banner issue';
-            document.getElementById('banner-text').innerText = data.message;
-        } else {
-            document.getElementById('banner-text').innerText = "All Systems Operational";
-        }
-        
-        Object.keys(data.services).forEach(key => {
-            const s = data.services[key];
-            const statusEl = document.getElementById(key + '-status');
-            const timeEl = document.getElementById(key + '-time');
-            if (statusEl) {
-                statusEl.innerText = s.status === "Up" ? "Operational" : "Issues";
-                statusEl.className = "status-indicator " + (s.status === "Up" ? "status-up" : "status-down");
+    async function initStatus() {
+        try {
+            const [statusRes, historyRes] = await Promise.all([
+                fetch('status.json?t=' + Date.now()),
+                fetch('history.json?t=' + Date.now())
+            ]);
+
+            const data = await statusRes.json();
+            const history = await historyRes.json();
+
+            document.getElementById('global-time').innerText = data.global_last_updated;
+            const container = document.getElementById('service-container');
+            container.innerHTML = "";
+
+            let anyIssues = data.global_issue;
+
+            Object.keys(data.services).forEach(key => {
+                const s = data.services[key];
+                if (s.status === "Down") anyIssues = true;
+
+                // Build Service UI
+                const pingHtml = s.ping ? `<span class="ping-badge">${s.ping}</span>` : '';
+                const item = document.createElement('div');
+                item.className = 'service-item';
+                
+                // History Blocks (Last 90 Days)
+                let historyHtml = '';
+                const daysToDisplay = 90;
+                for (let i = daysToDisplay; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    const dateStr = d.toISOString().split('T')[0];
+                    
+                    // Check history file for this date
+                    const dayData = (history[key] && history[key][dateStr]) ? history[key][dateStr] : [];
+                    let dayClass = '';
+                    if (dayData.length > 0) {
+                        dayClass = dayData.includes('Down') ? 'day-down' : 'day-up';
+                    }
+
+                    historyHtml += `<div class="day-block ${dayClass}" data-date="${dateStr}"></div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="service-main">
+                        <div>
+                            <span class="service-name">${key.toUpperCase()} ${pingHtml}</span>
+                            <small class="last-updated">Status: ${s.status} | Last Check: ${s.last_updated}</small>
+                        </div>
+                    </div>
+                    <div class="history-container">
+                        <div class="history-label"><span>90 days ago</span><span>Today</span></div>
+                        <div class="history-bar">${historyHtml}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Update Banner
+            const banner = document.getElementById('banner');
+            const bannerText = document.getElementById('banner-text');
+            if (anyIssues) {
+                banner.className = 'status-banner issue';
+                bannerText.innerText = data.global_issue ? data.message : "Service Disruption Detected";
+            } else {
+                banner.className = 'status-banner operational';
+                bannerText.innerText = "All Systems Operational";
             }
-            if (timeEl) timeEl.innerText = s.last_updated;
-        });
-    });
+
+        } catch (e) {
+            console.error("Status Load Error", e);
+        }
+    }
+
+    initStatus();
 </script>
 </body>
 </html>
