@@ -6,18 +6,18 @@
     <title>Yarm School Service Status</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; }
+        :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; --yarm-gold: #ffc107; }
         body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 800px; margin: auto; }
         .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .operational { background: var(--yarm-green); }
         .issue { background: var(--yarm-red); }
+        .broadcast { background: var(--yarm-gold); color: #000; }
         .service-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .service-main { display: flex; justify-content: space-between; align-items: center; }
         .service-name { font-weight: 600; color: var(--yarm-blue); font-size: 1.1rem; }
         .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; margin-left: 8px; }
-        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-        .history-bar { display: flex; gap: 2px; height: 18px; }
+        .history-bar { display: flex; gap: 2px; height: 18px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
         .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; }
         .day-up { background: var(--yarm-green); }
         .day-down { background: var(--yarm-red); }
@@ -27,9 +27,9 @@
 </head>
 <body>
     <div class="container">
-        <div id="banner" class="status-banner"><h1>Checking Systems...</h1></div>
+        <div id="banner" class="status-banner"><h1>Checking...</h1></div>
         <div id="service-container"></div>
-        <footer>&copy; 2026 Yarm School IT | <a href="admin.html" style="color:inherit; opacity:0.5; text-decoration:none;">Admin</a></footer>
+        <footer>&copy; 2026 Yarm School ITSDS | <a href="admin.html" style="color:inherit; opacity:0.5; text-decoration:none;">Admin</a></footer>
     </div>
     <script>
         async function init() {
@@ -39,8 +39,14 @@
                 let history = {};
                 try { const hRes = await fetch('history.json?t=' + Date.now()); if(hRes.ok) history = await hRes.json(); } catch(e){}
 
-                document.getElementById('banner').className = data.global_issue ? 'status-banner issue' : 'status-banner operational';
-                document.getElementById('banner').innerHTML = `<h1>${data.global_issue ? data.message : 'All Systems Operational'}</h1><small>Last check: ${data.global_last_updated}</small>`;
+                const banner = document.getElementById('banner');
+                if (data.broadcast_enabled) {
+                    banner.className = 'status-banner broadcast';
+                    banner.innerHTML = `<h1>📢 NOTICE</h1><p style="font-size:1.2rem; font-weight:600;">${data.broadcast_msg}</p>`;
+                } else {
+                    banner.className = data.global_issue ? 'status-banner issue' : 'status-banner operational';
+                    banner.innerHTML = `<h1>${data.global_issue ? data.message : 'All Systems Operational'}</h1><small>Last check: ${data.global_last_updated}</small>`;
+                }
 
                 const container = document.getElementById('service-container');
                 container.innerHTML = "";
@@ -54,7 +60,7 @@
                         if(history[key] && history[key][ds]) cls = (Array.isArray(history[key][ds]) ? history[key][ds].includes('Down') : history[key][ds] === 'Down') ? 'day-down' : 'day-up';
                         hHtml += `<div class="day-block ${cls}" data-date="${ds}"></div>`;
                     }
-                    container.innerHTML += `<div class="service-item"><div class="service-main"><div><span class="service-name">${key.toUpperCase()}</span>${s.ping ? `<span class="ping-badge">${s.ping}</span>` : ''}<br><small style="color:#888">Verified: ${s.last_updated}</small></div><span style="font-weight:600; color:${s.status==='Up'?'var(--yarm-green)':'var(--yarm-red)'}">${s.status==='Up'?'Operational':'Issues'}</span></div><div class="history-container"><div class="history-bar">${hHtml}</div></div></div>`;
+                    container.innerHTML += `<div class="service-item"><div class="service-main"><div><span class="service-name">${key.toUpperCase()}</span>${s.ping ? `<span class="ping-badge">${s.ping}</span>` : ''}<br><small style="color:#888">Verified: ${s.last_updated}</small></div><span style="font-weight:600; color:${s.status==='Up'?'var(--yarm-green)':'var(--yarm-red)'}">${s.status==='Up'?'Operational':'Issues'}</span></div><div class="history-bar">${hHtml}</div></div>`;
                 });
             } catch (e) { console.error(e); }
         }
