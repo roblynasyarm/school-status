@@ -1,4 +1,11 @@
 {
     "global_issue": false,
-    "message": "All Systems Operational"
+    "message": "All Systems Operational",
+    "services": {
+        "google": "Up",
+        "isams": "Up",
+        "classroom": "Up",
+        "youtube": "Up",
+        "evolve": "Up"
+    }
 }
