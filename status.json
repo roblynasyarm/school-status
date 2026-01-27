@@ -1,11 +1,6 @@
 {
   "global_issue": true,
   "message": "Google Workspace: Active Disruption Reported",
-  "services": {
-    "google": {
-      "status": "Down",
-      "last_updated": "2026-01-27 15:14"
-    }
-  },
-  "global_last_updated": "2026-01-27 15:14"
+  "services": {},
+  "global_last_updated": "27/01/2026, 15:1"
 }
