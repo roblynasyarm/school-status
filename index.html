@@ -9,144 +9,56 @@
         :root { --yarm-blue: rgb(3, 41, 106); --yarm-green: #2ed573; --yarm-red: #ff4757; }
         body { font-family: 'Montserrat', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 800px; margin: auto; }
-        
-        /* Banner Styles */
-        .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.5s; }
+        .status-banner { padding: 30px; border-radius: 12px; color: white; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .operational { background: var(--yarm-green); }
         .issue { background: var(--yarm-red); }
-        .status-banner h1 { margin: 0; font-size: 1.8rem; }
-
-        /* Service Cards */
-        .service-grid { display: grid; gap: 15px; }
-        .service-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .service-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .service-main { display: flex; justify-content: space-between; align-items: center; }
         .service-name { font-weight: 600; color: var(--yarm-blue); font-size: 1.1rem; }
-        .last-updated { font-size: 0.75rem; color: #888; display: block; margin-top: 4px; }
-        
-        /* Ping Badge */
-        .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; vertical-align: middle; margin-left: 8px; font-weight: 400; }
-
-        /* History Sparkline */
-        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-        .history-label { font-size: 0.65rem; color: #aaa; display: flex; justify-content: space-between; margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
+        .ping-badge { font-size: 0.7rem; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; color: #666; margin-left: 8px; }
+        .history-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
         .history-bar { display: flex; gap: 2px; height: 18px; }
-        .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; cursor: help; }
+        .day-block { flex: 1; border-radius: 2px; background: #eee; min-width: 3px; position: relative; }
         .day-up { background: var(--yarm-green); }
         .day-down { background: var(--yarm-red); }
-        
-        /* Simple Tooltip */
-        .day-block:hover::after { content: attr(data-date); position: absolute; top: -28px; left: 50%; transform: translateX(-50%); 
-                                  background: #333; color: #fff; padding: 3px 7px; border-radius: 4px; font-size: 0.65rem; white-space: nowrap; z-index: 10; }
-
+        .day-block:hover::after { content: attr(data-date); position: absolute; top: -28px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 3px 7px; border-radius: 4px; font-size: 0.65rem; white-space: nowrap; z-index: 10; }
         footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #aaa; }
-        a { color: inherit; text-decoration: none; transition: 0.2s; }
-        a:hover { opacity: 1; color: var(--yarm-blue); }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <div id="banner" class="status-banner">
-        <h1 id="banner-text">Checking Systems...</h1>
-        <small>Last check: <span id="global-time">-</span></small>
+    <div class="container">
+        <div id="banner" class="status-banner"><h1>Checking Systems...</h1></div>
+        <div id="service-container"></div>
+        <footer>&copy; 2026 Yarm School IT | <a href="admin.html" style="color:inherit; opacity:0.5; text-decoration:none;">Admin</a></footer>
     </div>
-
-    <div class="service-grid" id="service-container">
-        </div>
-
-    <footer>
-        &copy; 2026 Yarm School IT Services | 
-        <a href="admin.html" style="opacity: 0.3;">Admin Login</a>
-    </footer>
-</div>
-
-<script>
-    async function initStatus() {
-        const container = document.getElementById('service-container');
-        
-        try {
-            // 1. Fetch Status Data
-            const statusRes = await fetch('status.json?t=' + Date.now());
-            if (!statusRes.ok) throw new Error("Status file not found");
-            const data = await statusRes.json();
-
-            // 2. Fetch History Data (Optional)
-            let history = {};
+    <script>
+        async function init() {
             try {
-                const historyRes = await fetch('history.json?t=' + Date.now());
-                if (historyRes.ok) history = await historyRes.json();
-            } catch (e) {
-                console.warn("History data unavailable yet.");
-            }
+                const sRes = await fetch('status.json?t=' + Date.now());
+                const data = await sRes.json();
+                let history = {};
+                try { const hRes = await fetch('history.json?t=' + Date.now()); if(hRes.ok) history = await hRes.json(); } catch(e){}
 
-            // 3. Update Global Banner
-            const banner = document.getElementById('banner');
-            const bannerText = document.getElementById('banner-text');
-            document.getElementById('global-time').innerText = data.global_last_updated || "Just now";
+                document.getElementById('banner').className = data.global_issue ? 'status-banner issue' : 'status-banner operational';
+                document.getElementById('banner').innerHTML = `<h1>${data.global_issue ? data.message : 'All Systems Operational'}</h1><small>Last check: ${data.global_last_updated}</small>`;
 
-            if (data.global_issue) {
-                banner.className = 'status-banner issue';
-                bannerText.innerText = data.message || "Service Disruption Reported";
-            } else {
-                banner.className = 'status-banner operational';
-                bannerText.innerText = "All Systems Operational";
-            }
-
-            // 4. Render Individual Services
-            container.innerHTML = "";
-            Object.keys(data.services).forEach(key => {
-                const s = data.services[key];
-                
-                // Formatting
-                const pingHtml = s.ping ? `<span class="ping-badge">${s.ping}</span>` : '';
-                const isUp = s.status === 'Up';
-                const statusColor = isUp ? 'var(--yarm-green)' : 'var(--yarm-red)';
-                const statusLabel = isUp ? 'Operational' : 'Issues Detected';
-
-                // Build 90-Day History Bar
-                let historyHtml = '';
-                const daysToDisplay = 90;
-                for (let i = daysToDisplay; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(d.getDate() - i);
-                    const dateStr = d.toISOString().split('T')[0];
-                    
-                    let dayClass = ''; // Default empty (gray)
-                    if (history[key] && history[key][dateStr]) {
-                        const record = history[key][dateStr];
-                        const hadIssue = Array.isArray(record) ? record.includes('Down') : record === 'Down';
-                        dayClass = hadIssue ? 'day-down' : 'day-up';
+                const container = document.getElementById('service-container');
+                container.innerHTML = "";
+                Object.keys(data.services).forEach(key => {
+                    const s = data.services[key];
+                    let hHtml = '';
+                    for (let i = 90; i >= 0; i--) {
+                        const d = new Date(); d.setDate(d.getDate() - i);
+                        const ds = d.toISOString().split('T')[0];
+                        let cls = '';
+                        if(history[key] && history[key][ds]) cls = (Array.isArray(history[key][ds]) ? history[key][ds].includes('Down') : history[key][ds] === 'Down') ? 'day-down' : 'day-up';
+                        hHtml += `<div class="day-block ${cls}" data-date="${ds}"></div>`;
                     }
-                    historyHtml += `<div class="day-block ${dayClass}" data-date="${dateStr}"></div>`;
-                }
-
-                const item = document.createElement('div');
-                item.className = 'service-item';
-                item.innerHTML = `
-                    <div class="service-main">
-                        <div>
-                            <span class="service-name">${key.toUpperCase()} ${pingHtml}</span>
-                            <small class="last-updated">Verified: ${s.last_updated}</small>
-                        </div>
-                        <span style="font-weight:600; font-size: 0.9rem; color: ${statusColor}">${statusLabel}</span>
-                    </div>
-                    <div class="history-container">
-                        <div class="history-label"><span>90 days ago</span><span>Today</span></div>
-                        <div class="history-bar">${historyHtml}</div>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-
-        } catch (e) {
-            console.error("Critical Failure:", e);
-            document.getElementById('banner-text').innerText = "System Offline";
-            container.innerHTML = `<p style="text-align:center; color:#666;">Unable to load status data. Please contact IT support.</p>`;
+                    container.innerHTML += `<div class="service-item"><div class="service-main"><div><span class="service-name">${key.toUpperCase()}</span>${s.ping ? `<span class="ping-badge">${s.ping}</span>` : ''}<br><small style="color:#888">Verified: ${s.last_updated}</small></div><span style="font-weight:600; color:${s.status==='Up'?'var(--yarm-green)':'var(--yarm-red)'}">${s.status==='Up'?'Operational':'Issues'}</span></div><div class="history-container"><div class="history-bar">${hHtml}</div></div></div>`;
+                });
+            } catch (e) { console.error(e); }
         }
-    }
-
-    // Run on load
-    initStatus();
-</script>
+        init();
+    </script>
 </body>
 </html>
