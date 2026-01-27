@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin | Yarm Status</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root { --yarm-blue: rgb(3, 41, 106); }
+        body { font-family: 'Montserrat', sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 30px; border-radius: 12px; max-width: 500px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { background: var(--yarm-blue); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        .service-row { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; padding: 10px 0; }
+        .service-row span { flex-grow: 1; font-weight: 600; font-size: 0.9rem; }
+        .delete-btn { background: #ff4757; width: auto; font-size: 0.8rem; padding: 5px 10px; }
+        #admin-content { display: none; } /* Hidden until login */
+    </style>
+</head>
+<body>
+
+    <div class="card" id="login-card">
+        <h2 style="color: var(--yarm-blue); margin-top:0;">Yarm Admin Login</h2>
+        <p>Enter the department password to manage status.</p>
+        <input type="password" id="password" placeholder="Enter Password">
+        <button onclick="unlock()">Unlock Console</button>
+        <p id="login-err" style="color:red; font-size:0.8rem;"></p>
+    </div>
+
+    <div class="card" id="admin-content">
+        <h2 style="color: var(--yarm-blue); margin-top:0;">Management Console</h2>
+        
+        <label>Global Banner Status</label>
+        <select id="global_issue">
+            <option value="false">✅ Systems Normal</option>
+            <option value="true">⚠️ Active Incident / Maintenance</option>
+        </select>
+        <input type="text" id="global_message" placeholder="Banner Message (e.g. iSAMS is down for maintenance)">
+
+        <hr>
+        <div id="services-list"></div>
+        
+        <h4 style="margin-bottom:5px;">Add New Service</h4>
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="new_name" placeholder="Service Name">
+            <button onclick="addService()" style="width:100px;">Add</button>
+        </div>
+
+        <button onclick="saveChanges()" style="background: #2ed573; margin-top:20px;">Push Updates Live</button>
+        <p id="log" style="text-align:center; font-size:0.8rem; color:#666;"></p>
+    </div>
+
+    <script>
+        // PASTE YOUR ENCRYPTED TOKEN HERE
+        const ENCRYPTED_TOKEN = "91URpQgHkR8/pdx5rhs91vTtaNVogbAC0M8h6i+3WcQtv3VZd1XHUVZsttk1EM3CQ0V5OAtitHN0MgK/aO4LY+1suPYcrI0J2mZNEhqthuflZvKByBkqJm2u9yns1uF/";
+        
+        let decryptedToken = "";
+        let currentData = {};
+        let currentSha = "";
+
+        async function unlock() {
+            const pw = document.getElementById('password').value;
+            try {
+                // Try to decrypt the token with the password provided
+                const bytes = CryptoJS.AES.decrypt(ENCRYPTED_TOKEN, pw);
+                decryptedToken = bytes.toString(CryptoJS.enc.Utf8);
+
+                if (!decryptedToken.startsWith("github_pat")) {
+                    throw new Error("Invalid");
+                }
+
+                document.getElementById('login-card').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+                loadData();
+            } catch (e) {
+                document.getElementById('login-err').innerText = "Incorrect password. Access denied.";
+            }
+        }
+
+        async function loadData() {
+            const res = await fetch('status.json?t=' + Date.now());
+            currentData = await res.json();
+            document.getElementById('global_issue').value = currentData.global_issue.toString();
+            document.getElementById('global_message').value = currentData.message;
+            renderServices();
+
+            const repoRes = await fetch('https://api.github.com/repos/roblynasyarm/yarm-status/contents/status.json');
+            const repoData = await repoRes.json();
+            currentSha = repoData.sha;
+        }
+
+        function renderServices() {
+            const container = document.getElementById('services-list');
+            container.innerHTML = "";
+            Object.keys(currentData.services).forEach(key => {
+                const s = currentData.services[key];
+                container.innerHTML += `
+                    <div class="service-row">
+                        <span>${key.toUpperCase()}</span>
+                        <select onchange="updateStatus('${key}', this.value)" style="width:auto;">
+                            <option value="Up" ${s.status === 'Up' ? 'selected' : ''}>Up</option>
+                            <option value="Down" ${s.status === 'Down' ? 'selected' : ''}>Down</option>
+                        </select>
+                        <button class="delete-btn" onclick="deleteService('${key}')">×</button>
+                    </div>`;
+            });
+        }
+
+        function updateStatus(key, val) {
+            currentData.services[key].status = val;
+            currentData.services[key].last_updated = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }).slice(0, 16);
+        }
+
+        function addService() {
+            const name = document.getElementById('new_name').value.toLowerCase().replace(/\s/g, '');
+            if(!name) return;
+            currentData.services[name] = { status: "Up", last_updated: "Added Now" };
+            renderServices();
+        }
+
+        function deleteService(key) {
+            delete currentData.services[key];
+            renderServices();
+        }
+
+        async function saveChanges() {
+            const log = document.getElementById('log');
+            log.innerText = "Connecting to GitHub...";
+            
+            currentData.global_issue = document.getElementById('global_issue').value === "true";
+            currentData.message = document.getElementById('global_message').value;
+            currentData.global_last_updated = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }).slice(0, 16);
+
+            const response = await fetch('https://api.github.com/repos/roblynasyarm/yarm-status/contents/status.json', {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${decryptedToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Manual Status Update",
+                    content: btoa(JSON.stringify(currentData, null, 2)),
+                    sha: currentSha
+                })
+            });
+
+            if(response.ok) {
+                log.innerText = "Status Updated Successfully!";
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                log.innerText = "Upload failed. Check token permissions.";
+            }
+        }
+    </script>
+</body>
+</html>
