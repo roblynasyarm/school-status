@@ -1,8 +1,8 @@
 {
   "global_issue": false,
   "message": "All Systems Operational",
-  "broadcast_enabled": true,
-  "broadcast_msg": "TEST",
+  "broadcast_enabled": false,
+  "broadcast_msg": "TESTING",
   "services": {
     "Google": {
       "status": "Up",
