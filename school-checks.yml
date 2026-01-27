@@ -62,6 +62,42 @@ jobs:
             '.services[$k].status = $s | .services[$k].last_updated = $n' \
             status.json > tmp.json && mv tmp.json status.json
           done
+      - name: Run Dynamic Checks
+        run: |
+          NOW=$(TZ='Europe/London' date '+%Y-%m-%d %H:%M')
+          TODAY=$(TZ='Europe/London' date '+%Y-%m-%d')
+          
+          # Initialize history.json if it doesn't exist
+          if [ ! -f history.json ]; then echo "{}" > history.json; fi
+
+          keys=$(jq -r '.services | keys[]' status.json)
+          
+          for key in $keys; do
+            url=$(jq -r ".services[\"$key\"].url" status.json)
+            type=$(jq -r ".services[\"$key\"].type" status.json)
+            
+            if [ "$type" == "manual" ] || [ "$url" == "" ]; then continue; fi
+
+            # Measure Response Time (Ping)
+            # -w %{time_total} returns seconds; we multiply by 1000 for ms
+            START=$(date +%s%N)
+            RESPONSE=$(curl -s -L --max-time 10 "$url")
+            END=$(date +%s%N)
+            LATENCY=$(( (END - START) / 1000000 )) 
+
+            # Determine Status (Logic from previous steps)
+            # ... [Existing Logic here to set $STATUS] ...
+
+            # Save Latency and Status to main file
+            jq --arg k "$key" --arg s "$STATUS" --arg n "$NOW" --arg p "$LATENCY" \
+            '.services[$k].status = $s | .services[$k].last_updated = $n | .services[$k].ping = ($p + "ms")' \
+            status.json > tmp.json && mv tmp.json status.json
+
+            # Update History (Daily Uptime Percentage)
+            # We store an array of statuses for today, then calculate the average
+            jq --arg k "$key" --arg d "$TODAY" --arg s "$STATUS" \
+            '.[$k][$d] += [$s]' history.json > h_tmp.json && mv h_tmp.json history.json
+          done
 
       - name: Commit and Push Updates
         run: |
