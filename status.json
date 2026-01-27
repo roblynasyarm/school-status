@@ -3,15 +3,12 @@
   "message": "Google Workspace: Active Disruption Reported",
   "services": {
     "google": {
-      "status": "Up",
-      "last_updated": "27/01/2026, 14:5",
-      "type": "keyword",
-      "url": "https://www.google.com/appsstatus/dashboard/",
-      "keyword": "No incidents"
+      "status": "Down",
+      "last_updated": "2026-01-27 15:00"
     },
     "isams": "Up",
     "youtube": "Up",
     "evolve": "Up"
   },
-  "global_last_updated": "27/01/2026, 15:0"
+  "global_last_updated": "2026-01-27 15:00"
 }
