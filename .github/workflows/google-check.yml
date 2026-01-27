@@ -1,0 +1,50 @@
+name: Auto Google Status Check
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    # Runs at 08, 23, 38, and 53 minutes past the hour
+    - cron: '8,23,38,53 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-google:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Fetch Official Google Status
+        id: google
+        run: |
+          # Fetch the official JSON feed
+          curl -s https://www.google.com/appsstatus/dashboard/history.json > google_history.json
+          
+          # Check for any active incident today across Workspace
+          INCIDENT=$(jq '[.[] | select(.occurrence_type != "none")] | length' google_history.json)
+          
+          if [ "$INCIDENT" -gt "0" ]; then
+            echo "HAS_ISSUE=true" >> $GITHUB_ENV
+          else
+            echo "HAS_ISSUE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Update status.json
+        run: |
+          if [ "${{ env.HAS_ISSUE }}" = "true" ]; then
+            # Set Google status to Down
+            jq '.services.google = "Down" | .global_issue = true | .message = "Google Workspace: Active Disruption Reported"' status.json > temp.json && mv temp.json status.json
+          else
+            # Set Google status back to Up
+            jq '.services.google = "Up" | .global_issue = false | .message = "All Systems Operational"' status.json > temp.json && mv temp.json status.json
+          fi
+
+      - name: Commit Changes
+        run: |
+          git config --global user.name "Yarm Status Bot"
+          git config --global user.email "status@yarmschool.org"
+          git add status.json
+          # Only commit if there is actually a change to the status
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update Google status" && git push)
